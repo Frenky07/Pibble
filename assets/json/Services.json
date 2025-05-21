@@ -1,0 +1,33 @@
+[
+    {
+      "name": "Item 1",
+      "rating": 4.5,
+      "category": "Electronics",
+      "imageUrl": "https://example.com/item1.jpg"
+    },
+    {
+      "name": "Item 2",
+      "rating": 3.9,
+      "category": "Furniture",
+      "imageUrl": "https://example.com/item2.jpg"
+    },
+    {
+      "name": "Item 3",
+      "rating": 4.8,
+      "category": "Clothing",
+      "imageUrl": "https://example.com/item3.jpg"
+    },
+    {
+      "name": "Item 4",
+      "rating": 4.0,
+      "category": "Toys",
+      "imageUrl": "https://example.com/item4.jpg"
+    },
+    {
+      "name": "Item 5",
+      "rating": 4.2,
+      "category": "Food",
+      "imageUrl": "https://example.com/item5.jpg"
+    }
+  ]
+  
