@@ -187,21 +187,22 @@ class _ProfilePageState extends State<ProfilePage> {
                                   child: Row(
                                     children: _pets.map((pet) {
                                       return PetCard(
-                                        name: pet['name'],
-                                        age: pet['age'],
-                                        color: _getColorFromName(pet['color']),
+                                        name: pet['name'] ?? 'Pet Name',
+                                        age: pet['age'] ?? 'Pet Age',
+                                        color: _getColorFromName(
+                                            pet['color'] ?? 'Black'),
                                         onButtonTap: () {
                                           Navigator.push(
                                             context,
                                             MaterialPageRoute(
                                               builder: (context) =>
                                                   PetProfilePage(
-                                                petName: pet['name'],
-                                                age: pet['age'],
-                                                gender:
-                                                    'Unknown', // You can modify based on your data
-                                                weight:
-                                                    'Unknown', // Same as above
+                                                petName:
+                                                    pet['name'] ?? 'Pet Name',
+                                                age: pet['age'] ?? 'Pet Age',
+                                                gender: pet['jeniskelamin'] ??
+                                                    'Unknown',
+                                                weight: pet['berat'] ?? 00,
                                               ),
                                             ),
                                           );
@@ -285,8 +286,8 @@ class _ProfilePageState extends State<ProfilePage> {
                             Navigator.pushReplacement(
                               context,
                               MaterialPageRoute(
-                                builder: (context) => LoginPage()
-                              ), // Replace ProfilePage with LoginPage
+                                  builder: (context) =>
+                                      LoginPage()), // Replace ProfilePage with LoginPage
                             );
                           },
                           child: Container(

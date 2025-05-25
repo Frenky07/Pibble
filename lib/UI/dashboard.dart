@@ -233,8 +233,8 @@ class _DashboardContentState extends State<DashboardContent> {
                                   builder: (context) => PetProfilePage(
                                     petName: pet['name'] ?? 'Pet Name',
                                     age: pet['age'] ?? 'Pet Age',
-                                    gender: 'Unknown',
-                                    weight: 'Unknown',
+                                    gender: pet['jeniskelamin'] ?? 'Unknown',
+                                    weight: pet['berat'] ?? 00,
                                   ),
                                 ),
                               );

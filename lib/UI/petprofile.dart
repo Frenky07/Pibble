@@ -6,7 +6,7 @@ class PetProfilePage extends StatelessWidget {
   final String petName;
   final String age;
   final String gender;
-  final String weight;
+  final int weight;
 
   const PetProfilePage({
     super.key,
@@ -79,9 +79,7 @@ class PetProfilePage extends StatelessWidget {
                         ),
                       ],
                     ),
-                    SizedBox(
-                      height: 12,
-                    ),
+                    SizedBox(height: 12),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceAround,
                       children: [
@@ -102,7 +100,7 @@ class PetProfilePage extends StatelessWidget {
                             SizedBox(height: 4),
                             Text('Berat Badan'),
                             Text(
-                              weight,
+                              "$weight kg",
                               style: TextStyle(fontWeight: FontWeight.bold),
                             ),
                           ],
@@ -113,7 +111,7 @@ class PetProfilePage extends StatelessWidget {
                             SizedBox(height: 4),
                             Text('Umur'),
                             Text(
-                              weight,
+                              age,
                               style: TextStyle(fontWeight: FontWeight.bold),
                             ),
                           ],
@@ -125,7 +123,6 @@ class PetProfilePage extends StatelessWidget {
               ),
             ),
           ),
-          // SizedBox(height: 16),
           // Schedule section
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -154,8 +151,7 @@ class PetProfilePage extends StatelessWidget {
           // Schedule cards
           Expanded(
             child: Padding(
-              padding: const EdgeInsets.only(
-                  left: 16, right: 16), // Adjust padding value as needed
+              padding: const EdgeInsets.only(left: 16, right: 16),
               child: ListView(
                 children: [
                   ScheduleCard(

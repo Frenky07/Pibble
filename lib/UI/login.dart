@@ -57,14 +57,14 @@ class _LoginPageState extends State<LoginPage> {
 
         // Check if the user is a "Penyedia Jasa" but not a "doctor"
         if (_selectedRole == 'Penyedia Jasa' &&
-            responseData['role'] != 'doctor') {
+            responseData['role'] != 'jasa') {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Akun tidak memiliki izin')),
           );
         } else {
           // Navigate to the appropriate dashboard
           if (_selectedRole == 'Penyedia Jasa' &&
-              responseData['role'] == 'doctor') {
+              responseData['role'] == 'jasa') {
             // Navigate to ServiceDashboardPage if user is a doctor
             Navigator.push(
               context,
