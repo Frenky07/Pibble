@@ -33,7 +33,6 @@ class _DashboardPageState extends State<DashboardPage> {
       DashboardContent(userId: userId), // Pass userId to DashboardContent
       const ServicePage(),
       const Rewardpage(),
-      const Rewardpage(),
     ];
   }
 
@@ -67,13 +66,6 @@ class _DashboardPageState extends State<DashboardPage> {
           BottomNavigationBarItem(
             icon: Icon(
               Symbols.featured_seasonal_and_gifts,
-              color: _currentIndex == 2 ? Colors.teal : Colors.grey,
-            ),
-            label: '',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(
-              Icons.redeem,
               color: _currentIndex == 2 ? Colors.teal : Colors.grey,
             ),
             label: '',
@@ -336,6 +328,27 @@ class _DashboardContentState extends State<DashboardContent> {
 class _CustomSliverHeaderDelegate extends SliverPersistentHeaderDelegate {
   final int userId;
 
+  Future<Map<String, dynamic>> fetchPoints(int userId) async {
+    const url = 'http://localhost/flutter_api/get_pawspoints.php';
+    final response = await http.post(
+      Uri.parse(url),
+      headers: {"Content-Type": "application/json"},
+      body: json.encode({'user_id': userId}),
+    );
+
+    if (response.statusCode == 200) {
+      final Map<String, dynamic> data = json.decode(response.body);
+
+      if (data.containsKey('error')) {
+        return {"error": data['error']};
+      }
+
+      return data;
+    } else {
+      return {"error": "Failed to load points. Please try again later."};
+    }
+  }
+
   _CustomSliverHeaderDelegate({required this.userId});
 
   @override
@@ -416,29 +429,65 @@ class _CustomSliverHeaderDelegate extends SliverPersistentHeaderDelegate {
               ),
               Spacer(),
               // Points container
-              Container(
-                padding: EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: const Color.fromARGB(255, 45, 161, 255),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Column(
-                  children: [
-                    Text(
-                      "Poin",
-                      style: TextStyle(fontSize: 16, color: Colors.white),
-                    ),
-                    Text(
-                      "1500",
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
+              FutureBuilder<Map<String, dynamic>>(
+                future: fetchPoints(userId),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const CircularProgressIndicator();
+                  } else if (snapshot.hasError ||
+                      snapshot.data == null ||
+                      snapshot.data!.containsKey('error')) {
+                    return Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: const Color.fromARGB(255, 45, 161, 255),
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                    ),
-                  ],
-                ),
-              ),
+                      child: const Column(
+                        children: [
+                          Text(
+                            "Poin",
+                            style: TextStyle(fontSize: 16, color: Colors.white),
+                          ),
+                          Text(
+                            "Error",
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  } else {
+                    final points = snapshot.data!['pawspoints'].toString();
+                    return Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: const Color.fromARGB(255, 45, 161, 255),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Column(
+                        children: [
+                          const Text(
+                            "Poin",
+                            style: TextStyle(fontSize: 16, color: Colors.white),
+                          ),
+                          Text(
+                            points,
+                            style: const TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+                },
+              )
             ],
           ),
         ],

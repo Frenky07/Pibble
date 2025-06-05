@@ -1,5 +1,7 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:pibble/UI/user_rank.dart';
+import 'package:http/http.dart' as http;
+import 'package:pibble/UI/memberpage.dart';
 import 'package:material_symbols_icons/material_symbols_icons.dart';
 
 class Rewardpage extends StatefulWidget {
@@ -11,6 +13,11 @@ class Rewardpage extends StatefulWidget {
 
 class _RewardPageState extends State<Rewardpage> {
   int _currentIndex = 2;
+
+  int pawspoints = 0;
+  int memberPoints = 0;
+  bool loading = true;
+  String errorMessage = '';
 
   final List<Voucher> vouchers = [
     Voucher(
@@ -26,6 +33,43 @@ class _RewardPageState extends State<Rewardpage> {
         title: 'Voucher Purrfect Promo',
         points: 30),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    fetchUserPoints(1); // pass the user_id dynamically here
+  }
+
+  Future<void> fetchUserPoints(int userId) async {
+    final url = Uri.parse('http://localhost/flutter_api/get_pawspoints.php'); // Replace with your PHP endpoint URL
+
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'user_id': userId}),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        setState(() {
+          pawspoints = data['pawspoints'] ?? 0;
+          memberPoints = data['member_points'] ?? 0;
+          loading = false;
+        });
+      } else {
+        setState(() {
+          errorMessage = 'Failed to load points: ${response.reasonPhrase}';
+          loading = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        errorMessage = 'Error: $e';
+        loading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -74,34 +118,45 @@ class _RewardPageState extends State<Rewardpage> {
                                 Navigator.push(
                                   context,
                                   MaterialPageRoute(
-                                      builder: (context) =>
-                                          const UserRankPage()),
+                                      builder: (context) => MemberPage()),
                                 );
                               },
                             ),
                           ],
                         ),
                         const SizedBox(height: 8),
-                        Row(
-                          children: const [
-                            Text(
-                              '1,500',
-                              style: TextStyle(
+                        loading
+                            ? const CircularProgressIndicator(
                                 color: Colors.white,
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
+                              )
+                            : Row(
+                                children: [
+                                  Text(
+                                    '$pawspoints',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  const Text(
+                                    'Paw-Poin',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                ],
                               ),
+                        if (errorMessage.isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 8.0),
+                            child: Text(
+                              errorMessage,
+                              style: const TextStyle(color: Colors.redAccent),
                             ),
-                            SizedBox(width: 6),
-                            Text(
-                              'Paw-Poin',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 16,
-                              ),
-                            ),
-                          ],
-                        ),
+                          ),
                       ],
                     ),
                   ],
@@ -204,7 +259,7 @@ class VoucherCard extends StatelessWidget {
                     padding:
                         const EdgeInsets.symmetric(vertical: 4, horizontal: 12),
                     decoration: BoxDecoration(
-                      color: Color(0xFFFFD700),
+                      color: const Color(0xFFFFD700),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
