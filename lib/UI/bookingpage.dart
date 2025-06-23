@@ -9,7 +9,15 @@ import 'dashboard.dart'; // Import your Dashboard page
 
 class BookingPage extends StatefulWidget {
   final int serviceId;
-  const BookingPage({super.key, required this.serviceId});
+  final String label;
+  final String price;
+
+  const BookingPage({
+    super.key,
+    required this.serviceId,
+    required this.label,
+    required this.price,
+  });
 
   @override
   State<BookingPage> createState() => _BookingPageState();
@@ -19,8 +27,6 @@ class _BookingPageState extends State<BookingPage> {
   DateTime _focusedDay = DateTime.now();
   DateTime? _selectedDay;
   String? _selectedPet;
-  List<String> _doctors = [];
-  String? _selectedDoctor;
   List<Map<String, dynamic>> _pets = [];
   bool _isLoading = true;
   String? _waktu; // Store the fetched waktu
@@ -30,7 +36,6 @@ class _BookingPageState extends State<BookingPage> {
     super.initState();
     _fetchPets();
     _fetchWaktu(); // Fetch waktu when the page loads
-    _fetchDoctors();
   }
 
   Future<void> _fetchPets() async {
@@ -95,39 +100,8 @@ class _BookingPageState extends State<BookingPage> {
     }
   }
 
-  Future<void> _fetchDoctors() async {
-    const apiUrl =
-        "http://localhost/flutter_api/get_doctors.php"; // Your API endpoint to get users
-
-    try {
-      final response = await http.get(Uri.parse(apiUrl));
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        final doctors = List<Map<String, dynamic>>.from(data)
-            .where((user) => user['role'] == 'doctor')
-            .map<String>((doctor) => doctor['name'] as String)
-            .toList();
-
-        setState(() {
-          _doctors = doctors;
-        });
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Failed to load doctors")),
-        );
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error: $e")),
-      );
-    }
-  }
-
   Future<void> _bookAppointment() async {
-    if (_selectedDay == null ||
-        _selectedPet == null ||
-        _selectedDoctor == null) {
+    if (_selectedDay == null || _selectedPet == null) {
       print("Required data is missing");
       return;
     }
@@ -142,24 +116,12 @@ class _BookingPageState extends State<BookingPage> {
 
     // Capture the required data
     final userId = Provider.of<UserProvider>(context, listen: false).userId;
-
-    // Find the doctor ID by querying the selected doctor's name
-    final doctorData = await _fetchDoctorIdByName(_selectedDoctor!);
-
-    if (doctorData == null) {
-      print("Doctor not found");
-      return;
-    }
-
-    final doctorId =
-        doctorData['id']; // Assuming doctor ID is in the 'id' field
     final petId = _pets.firstWhere((pet) => pet['name'] == _selectedPet)['id'];
 
     // Prepare the data for the request
     final data = {
       "date": _selectedDay!.toIso8601String(),
       "user_id": userId,
-      "doctor_id": doctorId,
       "pets_id": petId,
       "service_id": widget.serviceId,
     };
@@ -182,7 +144,22 @@ class _BookingPageState extends State<BookingPage> {
       if (response.statusCode == 200) {
         final responseData = jsonDecode(response.body);
         if (responseData['status'] == 'success') {
-          // Successfully booked, navigate to the dashboard
+          final historyApiUrl ="http://localhost/flutter_api/insert_histories.php";
+
+          final historyData = {
+            "service_id": widget.serviceId,
+            "price": int.parse(widget.price.replaceAll('.', '')),
+            "pet_id": petId,
+            "date": DateTime.now().toIso8601String().split('T').first,
+            "label":widget.label,
+          };
+
+          await http.post(
+            Uri.parse(historyApiUrl),
+            headers: {"Content-Type": "application/json"},
+            body: jsonEncode(historyData),
+          );
+
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(builder: (context) => DashboardPage()),
@@ -200,32 +177,6 @@ class _BookingPageState extends State<BookingPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Error: $e")),
       );
-    }
-  }
-
-  Future<Map<String, dynamic>?> _fetchDoctorIdByName(String doctorName) async {
-    const apiUrl =
-        "http://localhost/flutter_api/get_doctor_by_name.php"; // Adjust to your actual API endpoint
-
-    try {
-      final response = await http.get(Uri.parse('$apiUrl?name=$doctorName'));
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        // Check if doctor data is returned and contains the ID
-        if (data != null && data['id'] != null) {
-          return data;
-        } else {
-          print("Doctor not found");
-          return null;
-        }
-      } else {
-        print("Failed to fetch doctor: ${response.statusCode}");
-        return null;
-      }
-    } catch (e) {
-      print("Error fetching doctor: $e");
-      return null;
     }
   }
 
@@ -323,70 +274,43 @@ class _BookingPageState extends State<BookingPage> {
                 const SizedBox(height: 16),
                 _isLoading
                     ? const Center(child: CircularProgressIndicator())
-                    : Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceAround,
-                        children: _pets.map((pet) {
-                          return PetCard(
-                            name: pet['name'],
-                            age: pet['age'],
-                            color: _getColorFromName(pet['color']),
-                            onButtonTap: () {
-                              setState(() {
-                                _selectedPet = _selectedPet == pet['name']
-                                    ? null
-                                    : pet['name'];
-                              });
-                            },
-                            isSelected: _selectedPet == pet['name'],
-                          );
-                        }).toList(),
+                    : SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          children: _pets.map((pet) {
+                            return Padding(
+                              padding: const EdgeInsets.only(
+                                  right: 12.0), // spacing between cards
+                              child: PetCard(
+                                name: pet['name'],
+                                age: pet['age'],
+                                color: _getColorFromName(pet['color']),
+                                onButtonTap: () {
+                                  setState(() {
+                                    _selectedPet = _selectedPet == pet['name']
+                                        ? null
+                                        : pet['name'];
+                                  });
+                                },
+                                isSelected: _selectedPet == pet['name'],
+                              ),
+                            );
+                          }).toList(),
+                        ),
                       ),
-                const SizedBox(height: 24),
-                const Text(
-                  "Pilih Dokter",
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black,
-                  ),
-                ),
-                const SizedBox(height: 20),
-                DropdownButtonFormField<String>(
-                  decoration: InputDecoration(
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8.0),
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16.0, vertical: 12.0),
-                  ),
-                  hint: const Text("Pilih Dokter"),
-                  value: _selectedDoctor,
-                  items: _doctors.map((String doctor) {
-                    return DropdownMenuItem<String>(
-                      value: doctor,
-                      child: Text(doctor),
-                    );
-                  }).toList(),
-                  onChanged: (String? value) {
-                    setState(() {
-                      _selectedDoctor = value;
-                    });
-                  },
-                ),
+                // const SizedBox(height: 24),
                 const SizedBox(height: 12),
                 Row(
                   children: [
                     Text(
-                      "Konsultasi Dokter Hewan",
-                      style: TextStyle(
-                        fontSize: 12,
-                      ),
+                      widget.label,
+                      style: const TextStyle(fontSize: 12),
                     ),
-                    Spacer(),
+                    const Spacer(),
                     Text(
-                      "Rp. 250.000",
-                      style:
-                          TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                      "Rp ${widget.price}",
+                      style: const TextStyle(
+                          fontSize: 15, fontWeight: FontWeight.bold),
                     ),
                   ],
                 ),

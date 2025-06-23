@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:pibble/UI/checkupoption.dart';
 import 'dart:convert';
-
 import 'package:pibble/UI/vaccineoption.dart';
 
 class PetServicePage extends StatefulWidget {
@@ -20,6 +19,7 @@ class _PetServicePageState extends State<PetServicePage> {
   @override
   void initState() {
     super.initState();
+    print('PetServicePage received serviceId: ${widget.serviceId}');
     clinicData = fetchClinicData(widget.serviceId);
   }
 

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:pibble/UI/addpet.dart';
+import 'package:pibble/UI/historypage.dart';
 import 'package:pibble/user_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:pibble/Widgets/petcard.dart';
@@ -33,6 +34,7 @@ class _DashboardPageState extends State<DashboardPage> {
       DashboardContent(userId: userId), // Pass userId to DashboardContent
       const ServicePage(),
       const Rewardpage(),
+      const HistoryPage(),
     ];
   }
 
@@ -67,6 +69,13 @@ class _DashboardPageState extends State<DashboardPage> {
             icon: Icon(
               Symbols.featured_seasonal_and_gifts,
               color: _currentIndex == 2 ? Colors.teal : Colors.grey,
+            ),
+            label: '',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(
+              Symbols.book_4,
+              color: _currentIndex == 3 ? Colors.teal : Colors.grey,
             ),
             label: '',
           ),
@@ -223,6 +232,7 @@ class _DashboardContentState extends State<DashboardContent> {
                                 context,
                                 MaterialPageRoute(
                                   builder: (context) => PetProfilePage(
+                                    pet_id: pet['id'] ?? 1,
                                     petName: pet['name'] ?? 'Pet Name',
                                     age: pet['age'] ?? 'Pet Age',
                                     gender: pet['jeniskelamin'] ?? 'Unknown',
@@ -285,32 +295,17 @@ class _DashboardContentState extends State<DashboardContent> {
                         final date = DateTime.parse(schedule['date']);
                         final formattedDate =
                             '${date.day}/${date.month}/${date.year}';
-                        final formattedTime =
-                            '${date.hour}:${date.minute.toString().padLeft(2, '0')}';
                         final waktu = schedule['waktu'];
 
-                        return Column(
-                          children: schedules.map((schedule) {
-                            final petName = schedule['pet_name'];
-                            final serviceName = schedule['service_name'];
-                            final date = DateTime.parse(schedule['date']);
-                            final formattedDate =
-                                '${date.day}/${date.month}/${date.year}';
-                            final formattedTime =
-                                '${date.hour}:${date.minute.toString().padLeft(2, '0')}';
-                            final waktu = schedule['waktu'];
-
-                            return ScheduleCard(
-                              time: schedule['waktu'],
-                              day: formattedDate,
-                              petName: petName,
-                              task: serviceName,
-                              color: const Color.fromARGB(255, 73, 200, 245),
-                              onTap: () {
-                                print('ScheduleCard tapped!');
-                              },
-                            );
-                          }).toList(),
+                        return ScheduleCard(
+                          time: waktu,
+                          day: formattedDate,
+                          petName: petName,
+                          task: serviceName,
+                          color: const Color.fromARGB(255, 73, 200, 245),
+                          onTap: () {
+                            print('ScheduleCard tapped!');
+                          },
                         );
                       }).toList(),
                     );
@@ -327,6 +322,11 @@ class _DashboardContentState extends State<DashboardContent> {
 
 class _CustomSliverHeaderDelegate extends SliverPersistentHeaderDelegate {
   final int userId;
+  late final Future<Map<String, dynamic>> _pointsFuture;
+
+  _CustomSliverHeaderDelegate({required this.userId}) {
+    _pointsFuture = fetchPoints(userId); // Initialize once
+  }
 
   Future<Map<String, dynamic>> fetchPoints(int userId) async {
     const url = 'http://localhost/flutter_api/get_pawspoints.php';
@@ -349,23 +349,21 @@ class _CustomSliverHeaderDelegate extends SliverPersistentHeaderDelegate {
     }
   }
 
-  _CustomSliverHeaderDelegate({required this.userId});
-
   @override
   Widget build(
       BuildContext context, double shrinkOffset, bool overlapsContent) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.only(
+        borderRadius: const BorderRadius.only(
           bottomLeft: Radius.circular(24.0),
           bottomRight: Radius.circular(24.0),
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1), // Slight shadow color
-            offset: Offset(0, 4), // Offset downwards
-            blurRadius: 8.0, // Blur effect for the shadow
+            color: Colors.black.withOpacity(0.1),
+            offset: const Offset(0, 4),
+            blurRadius: 8.0,
           ),
         ],
       ),
@@ -390,47 +388,34 @@ class _CustomSliverHeaderDelegate extends SliverPersistentHeaderDelegate {
                 child: CircleAvatar(
                   radius: 20,
                   backgroundColor: Colors.grey[300],
-                  child: Icon(Icons.person, color: Colors.grey),
+                  child: const Icon(Icons.person, color: Colors.grey),
                 ),
               ),
-              Spacer(),
-              // "PIBBLE" text
+              const Spacer(),
               const Text(
                 "PIBBLE",
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
               ),
-              Spacer(),
-              // Notification icon
-              Icon(Icons.notifications, color: Colors.grey),
+              const Spacer(),
+              const Icon(Icons.notifications, color: Colors.grey),
             ],
           ),
-          SizedBox(height: 16),
+          const SizedBox(height: 16),
           Row(
             children: [
-              // Welcome message and user info
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    "Selamat datang kembali",
-                    style: TextStyle(fontSize: 16, color: Colors.grey),
-                  ),
-                  Text(
-                    "User $userId",
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+                  const Text("Selamat datang kembali",
+                      style: TextStyle(fontSize: 16, color: Colors.grey)),
+                  Text("User $userId",
+                      style: const TextStyle(
+                          fontSize: 24, fontWeight: FontWeight.bold)),
                 ],
               ),
-              Spacer(),
-              // Points container
+              const Spacer(),
               FutureBuilder<Map<String, dynamic>>(
-                future: fetchPoints(userId),
+                future: _pointsFuture,
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const CircularProgressIndicator();
@@ -445,18 +430,14 @@ class _CustomSliverHeaderDelegate extends SliverPersistentHeaderDelegate {
                       ),
                       child: const Column(
                         children: [
-                          Text(
-                            "Poin",
-                            style: TextStyle(fontSize: 16, color: Colors.white),
-                          ),
-                          Text(
-                            "Error",
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
+                          Text("Poin",
+                              style:
+                                  TextStyle(fontSize: 16, color: Colors.white)),
+                          Text("Error",
+                              style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white)),
                         ],
                       ),
                     );
@@ -470,24 +451,22 @@ class _CustomSliverHeaderDelegate extends SliverPersistentHeaderDelegate {
                       ),
                       child: Column(
                         children: [
-                          const Text(
-                            "Poin",
-                            style: TextStyle(fontSize: 16, color: Colors.white),
-                          ),
+                          const Text("Poin",
+                              style:
+                                  TextStyle(fontSize: 16, color: Colors.white)),
                           Text(
                             points,
                             style: const TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white),
                           ),
                         ],
                       ),
                     );
                   }
                 },
-              )
+              ),
             ],
           ),
         ],
@@ -496,10 +475,10 @@ class _CustomSliverHeaderDelegate extends SliverPersistentHeaderDelegate {
   }
 
   @override
-  double get maxExtent => 200.0;
+  double get maxExtent => 150.0;
 
   @override
-  double get minExtent => 200.0;
+  double get minExtent => 150.0;
 
   @override
   bool shouldRebuild(covariant SliverPersistentHeaderDelegate oldDelegate) {

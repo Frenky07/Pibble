@@ -11,54 +11,13 @@ class Servicedashboard extends StatefulWidget {
 }
 
 class _ServicedashboardState extends State<Servicedashboard> {
-  int _currentIndex = 0;
-  late final List<Widget> _pages;
-
-  @override
-  void initState() {
-    super.initState();
-    final userId = Provider.of<UserProvider>(context, listen: false).userId;
-    _pages = [
-      DashboardContent(userId: userId), // Pass userId to DashboardContent
-    ];
-  }
-
   @override
   Widget build(BuildContext context) {
+    final userId = Provider.of<UserProvider>(context, listen: false).userId;
+
     return Scaffold(
       backgroundColor: const Color(0xFFEEF7FD),
-      body: _pages[_currentIndex],
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        onTap: (index) {
-          setState(() {
-            _currentIndex = index;
-          });
-        },
-        items: [
-          BottomNavigationBarItem(
-            icon: Icon(
-              Icons.grid_view,
-              color: _currentIndex == 0 ? Colors.teal : Colors.grey,
-            ),
-            label: '',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(
-              Icons.pets,
-              color: _currentIndex == 1 ? Colors.teal : Colors.grey,
-            ),
-            label: '',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(
-              Icons.redeem,
-              color: _currentIndex == 2 ? Colors.teal : Colors.grey,
-            ),
-            label: '',
-          ),
-        ],
-      ),
+      body: DashboardContent(userId: userId),
     );
   }
 }
@@ -220,7 +179,7 @@ class _CustomSliverHeaderDelegate extends SliverPersistentHeaderDelegate {
                 ),
               ),
               Spacer(),
-              const Text("PIBBLE",
+              const Text("PIBBLE SERVICES",
                   style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
               Spacer(),
               Icon(Icons.notifications, color: Colors.grey),

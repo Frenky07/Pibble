@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:pibble/UI/bookingpage.dart';
 
 class CheckupOption extends StatelessWidget {
@@ -6,47 +8,99 @@ class CheckupOption extends StatelessWidget {
 
   const CheckupOption({super.key, required this.serviceId});
 
+  Future<List<Checkup>> fetchCheckups() async {
+    final response = await http.get(
+      Uri.parse(
+          'http://localhost/flutter_api/get_checkups.php'), // ganti localhost jika perlu
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      if (data['success']) {
+        return (data['data'] as List)
+            .map((item) => Checkup.fromJson(item))
+            .toList();
+      }
+    }
+    throw Exception('Gagal mengambil data checkup');
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFE7F2F8),
-      body: CustomScrollView(
-        slivers: [
-          SliverPersistentHeader(
-            pinned: true,
-            delegate: _CustomSliverHeaderDelegate(
-              minHeight: 120.0,
-              maxHeight: 120.0,
-            ),
-          ),
-          SliverPadding(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 16.0, vertical: 24.0),
-            sliver: SliverList(
-              delegate: SliverChildListDelegate([
-                Center(
-                  child: Text(
-                    'Pilih Paket Layanan',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.grey[700],
-                    ),
+      body: FutureBuilder<List<Checkup>>(
+        future: fetchCheckups(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          if (snapshot.hasError || !snapshot.hasData) {
+            return const Center(child: Text('Gagal memuat data checkup'));
+          }
+
+          final checkups = snapshot.data!;
+
+          return CustomScrollView(
+            slivers: [
+              SliverPersistentHeader(
+                pinned: true,
+                delegate: _CustomSliverHeaderDelegate(
+                  minHeight: 120.0,
+                  maxHeight: 120.0,
+                ),
+              ),
+              SliverPadding(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 16.0, vertical: 24.0),
+                sliver: SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) {
+                      final c = checkups[index];
+                      return Column(
+                        children: [
+                          CheckupButton(
+                            label: c.label,
+                            description: c.description,
+                            price: c.price,
+                            serviceId: c.serviceId,
+                          ),
+                          const SizedBox(height: 16),
+                        ],
+                      );
+                    },
+                    childCount: checkups.length,
                   ),
                 ),
-                SizedBox(height: 24),
-                CheckupButton(
-                  label: "Konsultasi dokter hewan",
-                  description:
-                      "Pemeriksaan kesehatan umum yang dilakukan oleh dokter hewan sebelum melakukan diagnosis atau pengobatan.",
-                  price: "250.000",
-                  serviceId: serviceId, // Pass serviceId to CheckupButton
-                ),
-              ]),
-            ),
-          ),
-        ],
+              ),
+            ],
+          );
+        },
       ),
+    );
+  }
+}
+
+class Checkup {
+  final String label;
+  final String description;
+  final String price;
+  final int serviceId;
+
+  Checkup({
+    required this.label,
+    required this.description,
+    required this.price,
+    required this.serviceId,
+  });
+
+  factory Checkup.fromJson(Map<String, dynamic> json) {
+    return Checkup(
+      label: json['label'],
+      description: json['description'],
+      price: json['price'].toString(),
+      serviceId: int.parse(json['services_id']), // ✅ FIXED
     );
   }
 }
@@ -55,14 +109,14 @@ class CheckupButton extends StatefulWidget {
   final String label;
   final String description;
   final String price;
-  final int serviceId; // Add serviceId parameter
+  final int serviceId;
 
   const CheckupButton({
     Key? key,
     required this.label,
     required this.description,
     required this.price,
-    required this.serviceId, // Required serviceId
+    required this.serviceId,
   }) : super(key: key);
 
   @override
@@ -72,6 +126,18 @@ class CheckupButton extends StatefulWidget {
 class _CheckupButtonState extends State<CheckupButton> {
   bool _isExpanded = false;
 
+  String _formatPrice(String price) {
+    try {
+      final number = int.parse(price.replaceAll('.', ''));
+      return number.toString().replaceAllMapped(
+            RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+            (match) => '${match[1]}.',
+          );
+    } catch (_) {
+      return price;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -80,14 +146,14 @@ class _CheckupButtonState extends State<CheckupButton> {
         ElevatedButton(
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.lightBlue,
-            padding: EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
             ),
           ),
           onPressed: () {
             setState(() {
-              _isExpanded = !_isExpanded; // Toggle the expanded state
+              _isExpanded = !_isExpanded;
             });
           },
           child: Row(
@@ -95,7 +161,7 @@ class _CheckupButtonState extends State<CheckupButton> {
             children: [
               Text(
                 widget.label,
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
                   color: Colors.white,
@@ -112,8 +178,8 @@ class _CheckupButtonState extends State<CheckupButton> {
         ),
         if (_isExpanded)
           Container(
-            margin: EdgeInsets.only(top: 8),
-            padding: EdgeInsets.all(16),
+            margin: const EdgeInsets.only(top: 8),
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(12),
@@ -122,14 +188,14 @@ class _CheckupButtonState extends State<CheckupButton> {
                   color: Colors.grey.withOpacity(0.5),
                   blurRadius: 8,
                   spreadRadius: 2,
-                  offset: Offset(0, 2),
+                  offset: const Offset(0, 2),
                 ),
               ],
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
+                const Text(
                   "Keterangan",
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
@@ -137,23 +203,23 @@ class _CheckupButtonState extends State<CheckupButton> {
                     color: Colors.black,
                   ),
                 ),
-                SizedBox(height: 8),
+                const SizedBox(height: 8),
                 Text(
                   widget.description,
-                  style: TextStyle(fontSize: 14, color: Colors.black87),
+                  style: const TextStyle(fontSize: 14, color: Colors.black87),
                 ),
-                SizedBox(height: 16),
+                const SizedBox(height: 16),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
+                    const Text(
                       "Harga",
                       style:
                           TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                     ),
                     Text(
-                      "Rp ${widget.price}",
-                      style: TextStyle(
+                      "Rp ${_formatPrice(widget.price)}",
+                      style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                         color: Colors.lightBlue,
@@ -161,14 +227,17 @@ class _CheckupButtonState extends State<CheckupButton> {
                     ),
                   ],
                 ),
-                SizedBox(height: 16),
+                const SizedBox(height: 16),
                 ElevatedButton(
                   onPressed: () {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
                         builder: (context) => BookingPage(
-                          serviceId: widget.serviceId, // Pass serviceId to BookingPage
+                          serviceId: widget.serviceId,
+                          label: widget.label, // ✅ kirim label
+                          price: _formatPrice(widget
+                              .price), // ✅ kirim harga yang sudah diformat
                         ),
                       ),
                     );
@@ -179,7 +248,7 @@ class _CheckupButtonState extends State<CheckupButton> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  child: Center(
+                  child: const Center(
                     child: Text(
                       "Pilih",
                       style: TextStyle(
@@ -197,7 +266,6 @@ class _CheckupButtonState extends State<CheckupButton> {
     );
   }
 }
-
 
 class _CustomSliverHeaderDelegate extends SliverPersistentHeaderDelegate {
   final double minHeight;
@@ -230,24 +298,24 @@ class _CustomSliverHeaderDelegate extends SliverPersistentHeaderDelegate {
         child: Column(
           children: [
             const SizedBox(height: 45),
-            Row(
+            Stack(
+              alignment: Alignment.center,
               children: [
-                IconButton(
-                  icon: Icon(Icons.arrow_back, color: Colors.black),
-                  onPressed: () {
-                    Navigator.pop(context); // Navigate back
-                  },
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: IconButton(
+                    icon: const Icon(Icons.arrow_back, color: Colors.black),
+                    onPressed: () {
+                      Navigator.pop(context);
+                    },
+                  ),
                 ),
-                Expanded(
-                  child: Center(
-                    child: Text(
-                      "Check Up",
-                      style: TextStyle(
-                        fontSize: 36,
-                        fontWeight: FontWeight.bold,
-                        color: const Color.fromARGB(221, 89, 89, 89),
-                      ),
-                    ),
+                const Text(
+                  "Check Up",
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    color: Color.fromARGB(221, 89, 89, 89),
                   ),
                 ),
               ],

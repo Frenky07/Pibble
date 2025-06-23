@@ -197,6 +197,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                             MaterialPageRoute(
                                               builder: (context) =>
                                                   PetProfilePage(
+                                                pet_id:pet['id'] ?? 1,
                                                 petName:
                                                     pet['name'] ?? 'Pet Name',
                                                 age: pet['age'] ?? 'Pet Age',

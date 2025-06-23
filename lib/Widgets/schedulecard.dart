@@ -95,10 +95,6 @@ class ScheduleCard extends StatelessWidget {
                       ],
                     ),
                     Spacer(),
-                    Icon(
-                      Icons.chevron_right,
-                      color: Colors.white,
-                    ),
                   ],
                 ),
               ),

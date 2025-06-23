@@ -24,27 +24,8 @@ class _AddPetPageState extends State<AddPetPage> {
 
   // List of color names with their corresponding Colors
   final Map<String, Color> colorOptions = {
-    'Red': Colors.red,
     'Blue': Colors.blue,
-    'Green': Colors.green,
-    'Yellow': Colors.yellow,
-    'Purple': Colors.purple,
-    'Orange': Colors.orange,
     'Pink': Colors.pink,
-    'Brown': Colors.brown,
-    'Gray': Colors.grey,
-    'Black': Colors.black,
-    'White': Colors.white,
-    'Teal': Colors.teal,
-    'Indigo': Colors.indigo,
-    'Amber': Colors.amber,
-    'Lime': Colors.lime,
-    'Cyan': Colors.cyan,
-    'DeepPurple': Colors.deepPurple,
-    'LightBlue': Colors.lightBlue,
-    'LightGreen': Colors.lightGreen,
-    'BlueGrey': Colors.blueGrey,
-    'YellowAccent': Colors.yellowAccent,
   };
 
   String selectedColor = 'green'; // Default color
@@ -53,33 +34,25 @@ class _AddPetPageState extends State<AddPetPage> {
   void initState() {
     super.initState();
     _fetchJenisHewan();
-    _randomizeColor(); // Call randomize color on page load
-  }
-
-  // Function to randomly pick a color from the list
-  void _randomizeColor() {
-    final random = Random();
-    List<String> colorKeys = colorOptions.keys.toList();
-    setState(() {
-      selectedColor = colorKeys[random.nextInt(colorKeys.length)];
-    });
   }
 
   Future<String?> _getAnimalIdFromName(String animalName) async {
     const apiUrl = "http://localhost/flutter_api/get_animal_id_from_name.php";
 
     try {
-      // Use the query parameter format for GET request
-      final response =
-          await http.get(Uri.parse('$apiUrl?animal_name=$animalName'));
+      final response = await http.post(
+        Uri.parse(apiUrl),
+        body: {
+          'animal_name': animalName,
+        },
+      );
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         print(data);
 
-        // Assuming the response contains an "id" field
         if (data['animal_id'] != null) {
-          return data['animal_id'].toString(); // Return the id as a string
+          return data['animal_id'].toString();
         } else {
           print("Animal not found");
           return null;
@@ -109,10 +82,9 @@ class _AddPetPageState extends State<AddPetPage> {
   }
 
   Future<void> _addPet() async {
-    // Replace with the actual user ID from the user session or user provider
     int? getUserId(BuildContext context) {
       final userProvider = Provider.of<UserProvider>(context, listen: false);
-      return userProvider.userId; // Access the userId
+      return userProvider.userId;
     }
 
     int? userId = getUserId(context);
@@ -122,45 +94,43 @@ class _AddPetPageState extends State<AddPetPage> {
       return;
     }
 
-    // Get the animal_id from the selected animal name
-    var animalId = await _getAnimalIdFromName(selectedJenisHewan!);
+    // Set color based on gender
+    if (selectedJenisKelamin == "Laki Laki") {
+      selectedColor = "Blue";
+    } else if (selectedJenisKelamin == "Perempuan") {
+      selectedColor = "Pink";
+    }
 
+    var animalId = await _getAnimalIdFromName(selectedJenisHewan!);
     if (animalId != null) {
       final response = await http.post(
         Uri.parse('http://localhost/flutter_api/insert_pets.php'),
         body: {
           'name': nameController.text,
           'age': selectedUmurHewan!,
-          'color': selectedColor, // Send the random color here
-          'user_id': userId,
+          'color': selectedColor,
+          'user_id': userId.toString(),
           'berat': beratController.text,
-          'animal_id': animalId, // Use the animal_id fetched
+          'animal_id': animalId,
           'jeniskelamin': selectedJenisKelamin!,
         },
       );
 
       if (response.statusCode == 200) {
         var result = json.decode(response.body);
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(result['message'])));
         if (result['status'] == 'success') {
-          ScaffoldMessenger.of(context)
-              .showSnackBar(SnackBar(content: Text(result['message'])));
-
-          // Redirect to Dashboard after adding the pet
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(
-                builder: (context) =>
-                    const DashboardPage()), // Or use your existing DashboardPage
+            MaterialPageRoute(builder: (context) => const DashboardPage()),
           );
-        } else {
-          ScaffoldMessenger.of(context)
-              .showSnackBar(SnackBar(content: Text(result['message'])));
         }
       } else {
         throw Exception('Failed to add pet');
       }
     } else {
-      throw Exception('Please fill all boc');
+      throw Exception('Please fill all fields');
     }
   }
 
