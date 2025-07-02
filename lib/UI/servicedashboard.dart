@@ -1,50 +1,62 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:pibble/UI/serviceprofile.dart';
 import 'package:pibble/Widgets/schedulecard.dart';
 import 'package:pibble/user_provider.dart';
 import 'package:provider/provider.dart';
-import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:pibble/UI/userprofile.dart';
 
 class Servicedashboard extends StatefulWidget {
+  const Servicedashboard({super.key});
+
   @override
-  _ServicedashboardState createState() => _ServicedashboardState();
+  _DashboardPageState createState() => _DashboardPageState();
 }
 
-class _ServicedashboardState extends State<Servicedashboard> {
+class _DashboardPageState extends State<Servicedashboard> {
+  int _currentIndex = 0;
+  late final List<Widget> _pages;
+
+  @override
+  void initState() {
+    super.initState();
+    final userId = Provider.of<UserProvider>(context, listen: false).userId;
+    _pages = [
+      DashboardContent(userId: userId),
+    ];
+  }
+
   @override
   Widget build(BuildContext context) {
-    final userId = Provider.of<UserProvider>(context, listen: false).userId;
-
     return Scaffold(
       backgroundColor: const Color(0xFFEEF7FD),
-      body: DashboardContent(userId: userId),
+      body: _pages[_currentIndex],
     );
   }
 }
 
-class DashboardContent extends StatelessWidget {
+class DashboardContent extends StatefulWidget {
   final int userId;
 
   const DashboardContent({super.key, required this.userId});
 
-  Future<String> fetchPetName(int petId) async {
-    const url = 'http://localhost/flutter_api/get_pets.php';
-    final response = await http.post(
-      Uri.parse(url),
-      headers: {"Content-Type": "application/json"},
-      body: json.encode({'pet_id': petId}),
-    );
+  @override
+  _DashboardContentState createState() => _DashboardContentState();
+}
 
-    if (response.statusCode == 200) {
-      final String petName = json.decode(response.body);
-      return petName;
-    } else {
-      throw Exception('Failed to load pet name');
-    }
+class _DashboardContentState extends State<DashboardContent> {
+  late Future<List<dynamic>> _schedules;
+
+  @override
+  void initState() {
+    super.initState();
+    _schedules = fetchSchedules(widget.userId);
   }
 
   Future<List<dynamic>> fetchSchedules(int userId) async {
-    const url = 'http://localhost/flutter_api/get_schedule_doctor.php';
+    const url = 'http://localhost/flutter_api/get_schedule_services.php';
     final response = await http.post(
       Uri.parse(url),
       headers: {"Content-Type": "application/json"},
@@ -53,9 +65,7 @@ class DashboardContent extends StatelessWidget {
 
     if (response.statusCode == 200) {
       final List<dynamic> scheduleList = json.decode(response.body);
-      return scheduleList.isEmpty
-          ? []
-          : scheduleList; // Return an empty list if no schedules found
+      return scheduleList.isEmpty ? [] : scheduleList;
     } else {
       return [
         {"error": "Failed to load schedules. Please try again later."}
@@ -69,62 +79,59 @@ class DashboardContent extends StatelessWidget {
       slivers: [
         SliverPersistentHeader(
           pinned: true,
-          delegate: _CustomSliverHeaderDelegate(userId: userId),
+          delegate: _CustomSliverHeaderDelegate(userId: widget.userId),
         ),
         SliverPadding(
           padding: const EdgeInsets.symmetric(horizontal: 32.0),
           sliver: SliverList(
             delegate: SliverChildListDelegate([
-              Column(
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  SizedBox(height: 15),
-                  Text(
-                    "Schedule Penyedia Jasa",
+                  const Text(
+                    'Jadwal',
                     style: TextStyle(
-                      fontSize: 20,
+                      fontSize: 18,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  // Add FutureBuilder to fetch schedules
-                  FutureBuilder<List<dynamic>>(
-                    future: fetchSchedules(userId),
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting) {
-                        return Center(child: CircularProgressIndicator());
-                      } else if (snapshot.hasError) {
-                        return Center(child: Text('Error: ${snapshot.error}'));
-                      } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                        return Center(child: Text('No schedules available.'));
-                      } else {
-                        final schedules = snapshot.data!;
-
-                        return Column(
-                          children: schedules.map((schedule) {
-                            final petName = schedule['pet_name'];
-                            final serviceName = schedule['service_name'];
-                            final date = DateTime.parse(schedule['date']);
-                            final formattedDate =
-                                '${date.day}/${date.month}/${date.year}';
-                            final formattedTime =
-                                '${date.hour}:${date.minute.toString().padLeft(2, '0')}';
-                            final waktu = schedule['waktu'];
-
-                            return ScheduleCard(
-                              time: schedule['waktu'],
-                              day: formattedDate,
-                              petName: petName,
-                              task: serviceName,
-                              color: const Color.fromARGB(255, 73, 200, 245),
-                              onTap: () {
-                                print('ScheduleCard tapped!');
-                              },
-                            );
-                          }).toList(),
-                        );
-                      }
-                    },
-                  ),
                 ],
+              ),
+              const SizedBox(height: 16),
+              FutureBuilder<List<dynamic>>(
+                future: _schedules,
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  } else if (snapshot.hasError) {
+                    return Center(child: Text('Error: ${snapshot.error}'));
+                  } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                    return const Center(child: Text('No schedules available.'));
+                  } else {
+                    final schedules = snapshot.data!;
+                    return Column(
+                      children: schedules.map((schedule) {
+                        final petName = schedule['pet_name'] ?? 'Tidak diketahui';
+                        final serviceName = schedule['service_name'] ?? 'Layanan';
+                        final dateStr = schedule['date'] ?? DateTime.now().toIso8601String();
+                        final date = DateTime.tryParse(dateStr) ?? DateTime.now();
+                        final formattedDate = '${date.day}/${date.month}/${date.year}';
+                        final label = schedule['label'] ?? '';
+
+                        return ScheduleCard(
+                          day: formattedDate,
+                          petName: petName,
+                          serviceName: serviceName,
+                          label: label,
+                          color: const Color.fromARGB(255, 73, 200, 245),
+                          onTap: () {
+                            print('ScheduleCard tapped!');
+                          },
+                        );
+                      }).toList(),
+                    );
+                  }
+                },
               ),
             ]),
           ),
@@ -136,23 +143,44 @@ class DashboardContent extends StatelessWidget {
 
 class _CustomSliverHeaderDelegate extends SliverPersistentHeaderDelegate {
   final int userId;
+  late final Future<Map<String, dynamic>> _pointsFuture;
 
-  _CustomSliverHeaderDelegate({required this.userId});
+  _CustomSliverHeaderDelegate({required this.userId}) {
+    _pointsFuture = fetchPoints(userId);
+  }
+
+  Future<Map<String, dynamic>> fetchPoints(int userId) async {
+    const url = 'http://localhost/flutter_api/get_pawspoints.php';
+    final response = await http.post(
+      Uri.parse(url),
+      headers: {"Content-Type": "application/json"},
+      body: json.encode({'user_id': userId}),
+    );
+
+    if (response.statusCode == 200) {
+      final Map<String, dynamic> data = json.decode(response.body);
+      if (data.containsKey('error')) {
+        return {"error": data['error']};
+      }
+      return data;
+    } else {
+      return {"error": "Failed to load points. Please try again later."};
+    }
+  }
 
   @override
-  Widget build(
-      BuildContext context, double shrinkOffset, bool overlapsContent) {
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.only(
+        borderRadius: const BorderRadius.only(
           bottomLeft: Radius.circular(24.0),
           bottomRight: Radius.circular(24.0),
         ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.1),
-            offset: Offset(0, 4),
+            offset: const Offset(0, 4),
             blurRadius: 8.0,
           ),
         ],
@@ -170,19 +198,40 @@ class _CustomSliverHeaderDelegate extends SliverPersistentHeaderDelegate {
             children: [
               GestureDetector(
                 onTap: () {
-                  // Navigate to profile page
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => ServiceProfilePage()),
+                  );
                 },
                 child: CircleAvatar(
                   radius: 20,
                   backgroundColor: Colors.grey[300],
-                  child: Icon(Icons.person, color: Colors.grey),
+                  child: const Icon(Icons.person, color: Colors.grey),
                 ),
               ),
-              Spacer(),
-              const Text("PIBBLE SERVICES",
-                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-              Spacer(),
-              Icon(Icons.notifications, color: Colors.grey),
+              const Spacer(),
+              const Text(
+                "PIBBLE SERVICE",
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              ),
+              const Spacer(),
+              const Icon(Icons.notifications, color: Colors.grey),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text("Selamat datang kembali",
+                      style: TextStyle(fontSize: 16, color: Colors.grey)),
+                  Text("User $userId",
+                      style: const TextStyle(
+                          fontSize: 24, fontWeight: FontWeight.bold)),
+                ],
+              ),
+              const Spacer(),
             ],
           ),
         ],
@@ -191,10 +240,10 @@ class _CustomSliverHeaderDelegate extends SliverPersistentHeaderDelegate {
   }
 
   @override
-  double get maxExtent => 120.0;
+  double get maxExtent => 150.0;
 
   @override
-  double get minExtent => 120.0;
+  double get minExtent => 150.0;
 
   @override
   bool shouldRebuild(covariant SliverPersistentHeaderDelegate oldDelegate) {

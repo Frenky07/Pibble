@@ -298,10 +298,10 @@ class _DashboardContentState extends State<DashboardContent> {
                         final waktu = schedule['waktu'];
 
                         return ScheduleCard(
-                          time: waktu,
                           day: formattedDate,
+                          serviceName: serviceName,
                           petName: petName,
-                          task: serviceName,
+                          label: serviceName,
                           color: const Color.fromARGB(255, 73, 200, 245),
                           onTap: () {
                             print('ScheduleCard tapped!');

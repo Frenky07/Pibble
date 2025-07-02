@@ -3,17 +3,17 @@ import 'package:material_symbols_icons/symbols.dart';
 
 class ScheduleCard extends StatelessWidget {
   final String day;
-  final String time;
   final String petName;
-  final String task;
+  final String serviceName;
+  final String label;
   final Color color;
   final VoidCallback? onTap; // Add a callback for click events
 
   ScheduleCard({
     required this.day,
-    required this.time,
     required this.petName,
-    required this.task,
+    required this.serviceName,
+    required this.label,
     required this.color,
     this.onTap, // Optional callback
   });
@@ -45,13 +45,6 @@ class ScheduleCard extends StatelessWidget {
                     ),
                   ),
                   SizedBox(height: 4),
-                  Text(
-                    time,
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
                 ],
               ),
             ),
@@ -86,7 +79,7 @@ class ScheduleCard extends StatelessWidget {
                         ),
                         SizedBox(height: 4),
                         Text(
-                          task,
+                          label,
                           style: TextStyle(
                             fontSize: 14,
                             color: Colors.white,

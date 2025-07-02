@@ -185,10 +185,10 @@ class _PetProfilePageState extends State<PetProfilePage> {
                       itemBuilder: (context, index) {
                         final item = schedules[index];
                         return ScheduleCard(
+                          serviceName: item['service_name'] ?? '',
                           day: item['date'] ?? '',
-                          time: '10:00',
                           petName: widget.petName,
-                          task: item['task'] ?? '',
+                          label: item['task'] ?? '',
                           color: Color.fromARGB(255, 73, 200, 245),
                           onTap: () => print('Tapped ${item['task']}'),
                         );
