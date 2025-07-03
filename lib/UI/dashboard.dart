@@ -323,9 +323,27 @@ class _DashboardContentState extends State<DashboardContent> {
 class _CustomSliverHeaderDelegate extends SliverPersistentHeaderDelegate {
   final int userId;
   late final Future<Map<String, dynamic>> _pointsFuture;
+  late final Future<String> _usernameFuture;
 
   _CustomSliverHeaderDelegate({required this.userId}) {
-    _pointsFuture = fetchPoints(userId); // Initialize once
+    _pointsFuture = fetchPoints(userId);
+    _usernameFuture = fetchUsername(userId);
+  }
+
+  Future<String> fetchUsername(int userId) async {
+    const url = 'http://localhost/flutter_api/get_username.php';
+    final response = await http.post(
+      Uri.parse(url),
+      headers: {"Content-Type": "application/json"},
+      body: json.encode({'user_id': userId}),
+    );
+
+    if (response.statusCode == 200) {
+      final Map<String, dynamic> data = json.decode(response.body);
+      return data['name'] ?? 'User';
+    } else {
+      return 'User';
+    }
   }
 
   Future<Map<String, dynamic>> fetchPoints(int userId) async {
@@ -408,9 +426,30 @@ class _CustomSliverHeaderDelegate extends SliverPersistentHeaderDelegate {
                 children: [
                   const Text("Selamat datang kembali",
                       style: TextStyle(fontSize: 16, color: Colors.grey)),
-                  Text("User $userId",
-                      style: const TextStyle(
-                          fontSize: 24, fontWeight: FontWeight.bold)),
+                  FutureBuilder<String>(
+                    future: _usernameFuture,
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Text(
+                          "Memuat...",
+                          style: TextStyle(
+                              fontSize: 24, fontWeight: FontWeight.bold),
+                        );
+                      } else if (snapshot.hasError) {
+                        return const Text(
+                          "User",
+                          style: TextStyle(
+                              fontSize: 24, fontWeight: FontWeight.bold),
+                        );
+                      } else {
+                        return Text(
+                          snapshot.data ?? "User",
+                          style: const TextStyle(
+                              fontSize: 24, fontWeight: FontWeight.bold),
+                        );
+                      }
+                    },
+                  ),
                 ],
               ),
               const Spacer(),

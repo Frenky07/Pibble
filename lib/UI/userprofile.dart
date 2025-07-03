@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:pibble/UI/login.dart';
 import 'package:pibble/UI/petprofile.dart';
+import 'package:pibble/UI/useredit.dart';
 import 'package:pibble/Widgets/petcard.dart';
 import 'package:material_symbols_icons/material_symbols_icons.dart';
 import 'package:pibble/user_provider.dart';
@@ -17,11 +18,13 @@ class _ProfilePageState extends State<ProfilePage> {
   List<dynamic> _pets = [];
   bool _isLoading = true;
   bool _hasError = false;
+  String _username = '';
 
   @override
   void initState() {
     super.initState();
     _fetchPets();
+    _fetchUsername();
   }
 
   Future<void> _fetchPets() async {
@@ -57,6 +60,31 @@ class _ProfilePageState extends State<ProfilePage> {
         _isLoading = false;
       });
       print("Error fetching pets: $e");
+    }
+  }
+
+  Future<void> _fetchUsername() async {
+    final userId = Provider.of<UserProvider>(context, listen: false).userId;
+    final String apiUrl =
+        "http://localhost/flutter_api/get_username.php"; // adjust URL
+
+    try {
+      final response = await http.post(
+        Uri.parse(apiUrl),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({"user_id": userId}),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        setState(() {
+          _username = data['name'] ?? '';
+        });
+      } else {
+        print("Failed to fetch username");
+      }
+    } catch (e) {
+      print("Error fetching username: $e");
     }
   }
 
@@ -131,7 +159,7 @@ class _ProfilePageState extends State<ProfilePage> {
                       SizedBox(height: 16),
                       // User Name
                       Text(
-                        'Augustine',
+                        _username.isNotEmpty ? _username : 'Loading...',
                         style: TextStyle(
                           fontSize: 28,
                           fontWeight: FontWeight.bold,
@@ -197,7 +225,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                             MaterialPageRoute(
                                               builder: (context) =>
                                                   PetProfilePage(
-                                                pet_id:pet['id'] ?? 1,
+                                                pet_id: pet['id'] ?? 1,
                                                 petName:
                                                     pet['name'] ?? 'Pet Name',
                                                 age: pet['age'] ?? 'Pet Age',
@@ -223,6 +251,40 @@ class _ProfilePageState extends State<ProfilePage> {
                     color: Color(0xFFEEF7FD),
                     child: Column(
                       children: [
+                        SizedBox(height: 16),
+                        GestureDetector(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (context) => UserEdit()),
+                            );
+                          },
+                          child: Container(
+                            padding: EdgeInsets.symmetric(
+                                vertical: 12, horizontal: 16),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(24),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.4),
+                                  blurRadius: 6,
+                                  offset: Offset(0, 3),
+                                ),
+                              ],
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(Symbols.border_color, color: Colors.grey),
+                                SizedBox(width: 16),
+                                Text('Kustomisasi',
+                                    style: TextStyle(fontSize: 16)),
+                              ],
+                            ),
+                          ),
+                        ),
+                        SizedBox(height: 16),
                         GestureDetector(
                           onTap: () {},
                           child: Container(

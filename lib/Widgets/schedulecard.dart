@@ -44,7 +44,6 @@ class ScheduleCard extends StatelessWidget {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  SizedBox(height: 4),
                 ],
               ),
             ),
