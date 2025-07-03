@@ -55,8 +55,9 @@ class _PetProfilePageState extends State<PetProfilePage> {
 
         if (data['status'] == 'success' && data['schedules'] is List) {
           final parsed = (data['schedules'] as List).map<Map<String, String>>((item) => {
+                'serviceName': item['serviceName'].toString(),
                 'date': item['date'].toString(),
-                'task': item['task'].toString(),
+                'label': item['label'].toString(),
               }).toList();
           print("Parsed schedule: $parsed");
           return parsed;
@@ -185,12 +186,12 @@ class _PetProfilePageState extends State<PetProfilePage> {
                       itemBuilder: (context, index) {
                         final item = schedules[index];
                         return ScheduleCard(
-                          serviceName: item['service_name'] ?? '',
+                          serviceName: item['serviceName'] ?? '',
                           day: item['date'] ?? '',
                           petName: widget.petName,
-                          label: item['task'] ?? '',
+                          label: item['label'] ?? '',
                           color: Color.fromARGB(255, 73, 200, 245),
-                          onTap: () => print('Tapped ${item['task']}'),
+                          onTap: () => print('Tapped ${item['label']}'),
                         );
                       },
                     );

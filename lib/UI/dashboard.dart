@@ -292,6 +292,7 @@ class _DashboardContentState extends State<DashboardContent> {
                       children: schedules.map((schedule) {
                         final petName = schedule['pet_name'];
                         final serviceName = schedule['service_name'];
+                        final label = schedule['label'];
                         final date = DateTime.parse(schedule['date']);
                         final formattedDate =
                             '${date.day}/${date.month}/${date.year}';
@@ -301,7 +302,7 @@ class _DashboardContentState extends State<DashboardContent> {
                           day: formattedDate,
                           serviceName: serviceName,
                           petName: petName,
-                          label: serviceName,
+                          label: label,
                           color: const Color.fromARGB(255, 73, 200, 245),
                           onTap: () {
                             print('ScheduleCard tapped!');
@@ -550,5 +551,5 @@ Color _getColorFromName(String colorName) {
     'YellowAccent': Colors.yellowAccent,
   };
 
-  return colorMap[colorName] ?? Colors.black; // Default to black if not found
+  return colorMap[colorName] ?? Colors.blue;
 }

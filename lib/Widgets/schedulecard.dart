@@ -78,7 +78,7 @@ class ScheduleCard extends StatelessWidget {
                         ),
                         SizedBox(height: 4),
                         Text(
-                          label,
+                          '$serviceName - $label',
                           style: TextStyle(
                             fontSize: 14,
                             color: Colors.white,
