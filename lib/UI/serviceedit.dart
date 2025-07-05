@@ -1,5 +1,7 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:material_symbols_icons/material_symbols_icons.dart';
+import 'package:http/http.dart' as http;
+import 'package:pibble/UI/servicedashboard.dart';
 
 class ServiceEditPage extends StatefulWidget {
   const ServiceEditPage({Key? key}) : super(key: key);
@@ -13,6 +15,100 @@ class _ServiceEditPageState extends State<ServiceEditPage> {
   final TextEditingController _timeController = TextEditingController();
   final TextEditingController _locationController = TextEditingController();
 
+  String _initialName = '';
+  String _initialTime = '';
+  String _initialLocation = '';
+  bool _isEdited = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final userId = 7; // Replace with Provider if needed
+    _fetchServiceInfo(userId);
+  }
+
+  void _fetchServiceInfo(int userId) async {
+    const url = 'http://localhost/flutter_api/get_service_profile.php';
+    final response = await http.post(
+      Uri.parse(url),
+      headers: {"Content-Type": "application/json"},
+      body: json.encode({"user_id": userId}),
+    );
+
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+
+      setState(() {
+        _initialName = data['name'] ?? '';
+        _initialTime = data['waktu'] ?? '';
+        _initialLocation = data['alamat'] ?? '';
+
+        _nameController.text = _initialName;
+        _timeController.text = _initialTime;
+        _locationController.text = _initialLocation;
+      });
+
+      _nameController.addListener(_checkEditState);
+      _timeController.addListener(_checkEditState);
+      _locationController.addListener(_checkEditState);
+    }
+  }
+
+  void _checkEditState() {
+    setState(() {
+      _isEdited = _nameController.text != _initialName ||
+          _timeController.text != _initialTime ||
+          _locationController.text != _initialLocation;
+    });
+  }
+
+  void _submitUpdate() async {
+    const url = 'http://localhost/flutter_api/update_service.php';
+    final userId = 7; // Replace with Provider if needed
+
+    final response = await http.post(
+      Uri.parse(url),
+      headers: {"Content-Type": "application/json"},
+      body: json.encode({
+        "user_id": userId,
+        "name": _nameController.text,
+        "waktu": _timeController.text,
+        "alamat": _locationController.text,
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      final result = json.decode(response.body);
+      if (result["success"] == true) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Berhasil diperbarui")),
+        );
+        setState(() {
+          _isEdited = false;
+          _initialName = _nameController.text;
+          _initialTime = _timeController.text;
+          _initialLocation = _locationController.text;
+        });
+
+        await Future.delayed(const Duration(milliseconds: 500));
+
+        // Redirect to dashboard
+        if (mounted) {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(
+              builder: (_) =>
+                  const Servicedashboard(), // adjust if your dashboard has a different name
+            ),
+          );
+        }
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Gagal memperbarui")),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -21,7 +117,7 @@ class _ServiceEditPageState extends State<ServiceEditPage> {
         child: Column(
           children: [
             const SizedBox(height: 40),
-            // Header with back button and title
+            // Header
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
               child: Row(
@@ -39,7 +135,7 @@ class _ServiceEditPageState extends State<ServiceEditPage> {
               ),
             ),
             const SizedBox(height: 16),
-            // Image picker placeholder
+            // Image Picker Placeholder
             GestureDetector(
               onTap: () {
                 // Add image picker logic later
@@ -91,80 +187,14 @@ class _ServiceEditPageState extends State<ServiceEditPage> {
                   const SizedBox(height: 16),
                   _buildLabel('Lokasi'),
                   _buildTextField(_locationController, 'Lokasi Penyedia Jasa'),
-                  const SizedBox(height: 24),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        'Melayani Hewan',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      GestureDetector(
-                        onTap: () {
-                          // Add logic to add animals
-                        },
-                        child: const Text(
-                          'Tambahkan',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.blue,
-                            decoration: TextDecoration.underline,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  // Animal chips/cards
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      children: List.generate(5, (index) {
-                        final colors = [
-                          Colors.blue,
-                          Colors.pink,
-                          Colors.blue,
-                          Colors.pink,
-                          Colors.blue
-                        ];
-                        final icons = [
-                          Icons.pets,
-                          Symbols.raven,
-                          Symbols.mouse,
-                          Icons.cruelty_free,
-                          Icons.pets
-                        ];
-                        return Padding(
-                          padding: const EdgeInsets.only(right: 8.0),
-                          child: Container(
-                            width: 64,
-                            height: 64,
-                            decoration: BoxDecoration(
-                              color: colors[index],
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Icon(
-                              icons[index],
-                              color: Colors.white,
-                            ),
-                          ),
-                        );
-                      }),
-                    ),
-                  ),
                   const SizedBox(height: 32),
-                  // Update button
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
-                      onPressed: () {
-                        // Submit logic
-                      },
+                      onPressed: _isEdited ? _submitUpdate : null,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF47C7F4),
+                        backgroundColor:
+                            _isEdited ? const Color(0xFF47C7F4) : Colors.grey,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(24),
                         ),
