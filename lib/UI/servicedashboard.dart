@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:pibble/UI/userprofile.dart';
+import 'package:table_calendar/table_calendar.dart';
 
 class Servicedashboard extends StatefulWidget {
   const Servicedashboard({super.key});
@@ -48,6 +49,9 @@ class DashboardContent extends StatefulWidget {
 
 class _DashboardContentState extends State<DashboardContent> {
   late Future<List<dynamic>> _schedules;
+  DateTime _focusedDay = DateTime.now();
+  DateTime? _selectedDay;
+  Set<DateTime> _scheduleDays = {};
 
   @override
   void initState() {
@@ -65,12 +69,36 @@ class _DashboardContentState extends State<DashboardContent> {
 
     if (response.statusCode == 200) {
       final List<dynamic> scheduleList = json.decode(response.body);
-      return scheduleList.isEmpty ? [] : scheduleList;
+      if (scheduleList.isEmpty) return [];
+
+      _scheduleDays = scheduleList
+          .map((s) {
+            final dateStr = s['date'] ?? '';
+            return DateTime.tryParse(dateStr)?.toLocal();
+          })
+          .whereType<DateTime>()
+          .toSet();
+
+      return scheduleList;
     } else {
       return [
         {"error": "Failed to load schedules. Please try again later."}
       ];
     }
+  }
+
+  Widget _buildDot(Color color) {
+    return Align(
+      alignment: Alignment.bottomCenter,
+      child: Container(
+        width: 6,
+        height: 6,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: color,
+        ),
+      ),
+    );
   }
 
   @override
@@ -85,6 +113,43 @@ class _DashboardContentState extends State<DashboardContent> {
           padding: const EdgeInsets.symmetric(horizontal: 32.0),
           sliver: SliverList(
             delegate: SliverChildListDelegate([
+              const SizedBox(
+                height: 16,
+              ),
+              TableCalendar(
+                firstDay: DateTime.utc(2020, 1, 1),
+                lastDay: DateTime.utc(2030, 12, 31),
+                focusedDay: _focusedDay,
+                selectedDayPredicate: (day) {
+                  return isSameDay(_selectedDay, day);
+                },
+                onDaySelected: (selectedDay, focusedDay) {
+                  setState(() {
+                    _selectedDay = selectedDay;
+                    _focusedDay = focusedDay;
+                  });
+                },
+                calendarBuilders: CalendarBuilders(
+                  markerBuilder: (context, date, events) {
+                    final isToday = isSameDay(date, DateTime.now());
+                    final hasSchedule =
+                        _scheduleDays.any((d) => isSameDay(d, date));
+
+                    if (isToday && hasSchedule) {
+                      return _buildDot(Colors.purple);
+                    } else if (hasSchedule) {
+                      return _buildDot(Colors.blue);
+                    } else if (isToday) {
+                      return _buildDot(Colors.red);
+                    }
+                    return null;
+                  },
+                ),
+              ),
+              SizedBox(height: 16),
+              const SizedBox(
+                height: 16,
+              ),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -111,11 +176,16 @@ class _DashboardContentState extends State<DashboardContent> {
                     final schedules = snapshot.data!;
                     return Column(
                       children: schedules.map((schedule) {
-                        final petName = schedule['pet_name'] ?? 'Tidak diketahui';
-                        final serviceName = schedule['service_name'] ?? 'Layanan';
-                        final dateStr = schedule['date'] ?? DateTime.now().toIso8601String();
-                        final date = DateTime.tryParse(dateStr) ?? DateTime.now();
-                        final formattedDate = '${date.day}/${date.month}/${date.year}';
+                        final petName =
+                            schedule['pet_name'] ?? 'Tidak diketahui';
+                        final serviceName =
+                            schedule['service_name'] ?? 'Layanan';
+                        final dateStr = schedule['date'] ??
+                            DateTime.now().toIso8601String();
+                        final date =
+                            DateTime.tryParse(dateStr) ?? DateTime.now();
+                        final formattedDate =
+                            '${date.day}/${date.month}/${date.year}';
                         final label = schedule['label'] ?? '';
 
                         return ScheduleCard(
@@ -169,7 +239,8 @@ class _CustomSliverHeaderDelegate extends SliverPersistentHeaderDelegate {
   }
 
   @override
-  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+  Widget build(
+      BuildContext context, double shrinkOffset, bool overlapsContent) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -200,7 +271,8 @@ class _CustomSliverHeaderDelegate extends SliverPersistentHeaderDelegate {
                 onTap: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => ServiceProfilePage()),
+                    MaterialPageRoute(
+                        builder: (context) => ServiceProfilePage()),
                   );
                 },
                 child: CircleAvatar(

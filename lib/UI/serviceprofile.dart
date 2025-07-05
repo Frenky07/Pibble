@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:pibble/UI/login.dart';
 import 'package:pibble/UI/petprofile.dart';
+import 'package:pibble/UI/serviceedit.dart';
+import 'package:pibble/Widgets/animalcard.dart';
 import 'package:pibble/Widgets/petcard.dart';
 import 'package:material_symbols_icons/material_symbols_icons.dart';
 import 'package:pibble/user_provider.dart';
@@ -14,35 +16,61 @@ class ServiceProfilePage extends StatefulWidget {
 }
 
 class _ProfilePageState extends State<ServiceProfilePage> {
-  List<dynamic> _pets = [];
+  List<dynamic> _animals = [];
   bool _isLoading = true;
   bool _hasError = false;
+  String _serviceName = '';
+  double _rating = 0.0;
 
   @override
   void initState() {
     super.initState();
-    _fetchPets();
+    final userId = Provider.of<UserProvider>(context, listen: false).userId;
+    _fetchAnimals(userId);
+    _fetchServiceInfo(userId);
   }
 
-  Future<void> _fetchPets() async {
-    final String apiUrl =
-        "http://localhost/flutter_api/petcard.php"; // Replace with your API URL
-    final userId = Provider.of<UserProvider>(context, listen: false).userId;
-    final Map<String, dynamic> requestBody = {
-      "user_id": userId
-    };
-
+  void _fetchServiceInfo(int userId) async {
     try {
+      const url = 'http://localhost/flutter_api/get_service_info.php';
       final response = await http.post(
-        Uri.parse(apiUrl),
+        Uri.parse(url),
         headers: {"Content-Type": "application/json"},
-        body: jsonEncode(requestBody),
+        body: json.encode({"user_id": userId}),
       );
 
       if (response.statusCode == 200) {
-        final List<dynamic> pets = jsonDecode(response.body);
+        final data = json.decode(response.body);
+        print('API Response: $data');
+        print('Parsed name: ${data['name']}');
+        print('Parsed rating: ${data['rating']}');
+        if (data['error'] == null) {
+          setState(() {
+            _serviceName = data['name'] ?? '';
+
+            if (data['rating'] != null) {
+              _rating = double.tryParse(data['rating'].toString()) ?? 0.0;
+            } else {
+              _rating = 0.0;
+            }
+          });
+        }
+      }
+    } catch (e) {}
+  }
+
+  void _fetchAnimals(int userId) async {
+    try {
+      const url = 'http://localhost/flutter_api/get_animalcard.php';
+      final response = await http.post(
+        Uri.parse(url),
+        headers: {"Content-Type": "application/json"},
+        body: json.encode({"user_id": userId}),
+      );
+
+      if (response.statusCode == 200) {
         setState(() {
-          _pets = pets;
+          _animals = json.decode(response.body);
           _isLoading = false;
         });
       } else {
@@ -56,36 +84,52 @@ class _ProfilePageState extends State<ServiceProfilePage> {
         _hasError = true;
         _isLoading = false;
       });
-      print("Error fetching pets: $e");
     }
   }
 
   Color _getColorFromName(String colorName) {
     Map<String, Color> colorMap = {
-      'Red': Colors.red,
-      'Blue': Colors.blue,
-      'Green': Colors.green,
-      'Yellow': Colors.yellow,
-      'Purple': Colors.purple,
-      'Orange': Colors.orange,
-      'Pink': Colors.pink,
-      'Brown': Colors.brown,
-      'Gray': Colors.grey,
-      'Black': Colors.black,
-      'White': Colors.white,
-      'Teal': Colors.teal,
-      'Indigo': Colors.indigo,
-      'Amber': Colors.amber,
-      'Lime': Colors.lime,
-      'Cyan': Colors.cyan,
-      'DeepPurple': Colors.deepPurple,
-      'LightBlue': Colors.lightBlue,
-      'LightGreen': Colors.lightGreen,
-      'BlueGrey': Colors.blueGrey,
-      'YellowAccent': Colors.yellowAccent,
+      'red': Colors.red,
+      'blue': Colors.blue,
+      'green': Colors.green,
+      'yellow': Colors.yellow,
+      'purple': Colors.purple,
+      'orange': Colors.orange,
+      'pink': Colors.pink,
+      'brown': Colors.brown,
+      'gray': Colors.grey,
+      'black': Colors.black,
+      'white': Colors.white,
+      'teal': Colors.teal,
+      'indigo': Colors.indigo,
+      'amber': Colors.amber,
+      'lime': Colors.lime,
+      'cyan': Colors.cyan,
+      'deepPurple': Colors.deepPurple,
+      'lightBlue': Colors.lightBlue,
+      'lightGreen': Colors.lightGreen,
+      'blueGrey': Colors.blueGrey,
+      'yellowAccent': Colors.yellowAccent,
     };
 
     return colorMap[colorName] ?? Colors.black; // Default to black if not found
+  }
+
+  IconData _getIconFromName(String iconName) {
+    switch (iconName) {
+      case 'sound_detection_dog_barking':
+        return Symbols.sound_detection_dog_barking;
+      case 'raven':
+        return Symbols.raven;
+      case 'mouse':
+        return Symbols.mouse;
+      case 'cruelty_free':
+        return Symbols.cruelty_free;
+      case 'waves':
+        return Symbols.waves;
+      default:
+        return Symbols.help_outline;
+    }
   }
 
   @override
@@ -131,25 +175,24 @@ class _ProfilePageState extends State<ServiceProfilePage> {
                       SizedBox(height: 16),
                       // User Name
                       Text(
-                        'Augustine',
-                        style: TextStyle(
+                        _serviceName.isNotEmpty ? _serviceName : '...',
+                        style: const TextStyle(
                           fontSize: 28,
                           fontWeight: FontWeight.bold,
                           color: Colors.white,
                         ),
                       ),
-                      SizedBox(height: 8),
-                      // Buddy Label
+                      const SizedBox(height: 8),
                       Container(
-                        padding:
-                            EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 6),
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(16),
                         ),
                         child: Text(
-                          '4.9',
-                          style: TextStyle(
+                          _rating > 0 ? _rating.toStringAsFixed(1) : '-',
+                          style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
                             color: Color(0xFF47C7F4),
@@ -178,44 +221,33 @@ class _ProfilePageState extends State<ServiceProfilePage> {
                   SizedBox(height: 16),
                   // Loading or Error Handling
                   _isLoading
-                      ? Center(child: CircularProgressIndicator())
+                      ? const Center(child: CircularProgressIndicator())
                       : _hasError
-                          ? Center(child: Text("Failed to load pets."))
-                          : _pets.isNotEmpty
+                          ? const Center(child: Text("Failed to load animals."))
+                          : _animals.isNotEmpty
                               ? SingleChildScrollView(
                                   scrollDirection: Axis.horizontal,
                                   child: Row(
-                                    children: _pets.map((pet) {
-                                      return PetCard(
-                                        name: pet['name'] ?? 'Pet Name',
-                                        age: pet['age'] ?? 'Pet Age',
-                                        color: _getColorFromName(
-                                            pet['color'] ?? 'Black'),
-                                        onButtonTap: () {
-                                          Navigator.push(
-                                            context,
-                                            MaterialPageRoute(
-                                              builder: (context) =>
-                                                  PetProfilePage(
-                                                pet_id:pet['id'] ?? 1,
-                                                petName:
-                                                    pet['name'] ?? 'Pet Name',
-                                                age: pet['age'] ?? 'Pet Age',
-                                                gender: pet['jeniskelamin'] ??
-                                                    'Unknown',
-                                                weight: pet['berat'] ?? 00,
-                                              ),
-                                            ),
-                                          );
-                                        },
+                                    children: _animals.map((animal) {
+                                      return Padding(
+                                        padding:
+                                            const EdgeInsets.only(right: 12.0),
+                                        child: AnimalCard(
+                                          name: animal['name'] ?? 'Unknown',
+                                          backgroundColor: _getColorFromName(
+                                              animal['color'] ?? 'Black'),
+                                          iconData: _getIconFromName(
+                                              animal['icon'] ?? ''),
+                                          isSelected: false,
+                                        ),
                                       );
                                     }).toList(),
                                   ),
                                 )
-                              : Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 24.0),
-                                  child: Text("No pets found."),
+                              : const Padding(
+                                  padding:
+                                      EdgeInsets.symmetric(horizontal: 24.0),
+                                  child: Text("No animals found."),
                                 ),
                   SizedBox(height: 16),
                   // Options Section
@@ -223,6 +255,40 @@ class _ProfilePageState extends State<ServiceProfilePage> {
                     color: Color(0xFFEEF7FD),
                     child: Column(
                       children: [
+                        SizedBox(height: 16),
+                        GestureDetector(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (context) => ServiceEditPage()),
+                            );
+                          },
+                          child: Container(
+                            padding: EdgeInsets.symmetric(
+                                vertical: 12, horizontal: 16),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(24),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.4),
+                                  blurRadius: 6,
+                                  offset: Offset(0, 3),
+                                ),
+                              ],
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(Symbols.border_color, color: Colors.grey),
+                                SizedBox(width: 16),
+                                Text('Kustomisasi',
+                                    style: TextStyle(fontSize: 16)),
+                              ],
+                            ),
+                          ),
+                        ),
+                        SizedBox(height: 16),
                         GestureDetector(
                           onTap: () {},
                           child: Container(
