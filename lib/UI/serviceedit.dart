@@ -1,7 +1,12 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:material_symbols_icons/material_symbols_icons.dart';
+import 'package:pibble/UI/serviceanimaledit.dart';
 import 'package:pibble/UI/servicedashboard.dart';
+import 'package:pibble/user_provider.dart';
+import 'package:provider/provider.dart';
+import 'package:pibble/Widgets/animalcard.dart';
 
 class ServiceEditPage extends StatefulWidget {
   const ServiceEditPage({Key? key}) : super(key: key);
@@ -20,11 +25,14 @@ class _ServiceEditPageState extends State<ServiceEditPage> {
   String _initialLocation = '';
   bool _isEdited = false;
 
+  List<Map<String, dynamic>> _selectedAnimals = [];
+
   @override
   void initState() {
     super.initState();
-    final userId = 7; // Replace with Provider if needed
+    final userId = Provider.of<UserProvider>(context, listen: false).userId;
     _fetchServiceInfo(userId);
+    _fetchSelectedAnimals(userId);
   }
 
   void _fetchServiceInfo(int userId) async {
@@ -37,7 +45,6 @@ class _ServiceEditPageState extends State<ServiceEditPage> {
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
-
       setState(() {
         _initialName = data['name'] ?? '';
         _initialTime = data['waktu'] ?? '';
@@ -54,6 +61,22 @@ class _ServiceEditPageState extends State<ServiceEditPage> {
     }
   }
 
+  void _fetchSelectedAnimals(int userId) async {
+    const url = 'http://localhost/flutter_api/get_animalcard.php';
+    final response = await http.post(
+      Uri.parse(url),
+      headers: {"Content-Type": "application/json"},
+      body: json.encode({"user_id": userId}),
+    );
+
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      setState(() {
+        _selectedAnimals = List<Map<String, dynamic>>.from(data);
+      });
+    }
+  }
+
   void _checkEditState() {
     setState(() {
       _isEdited = _nameController.text != _initialName ||
@@ -64,7 +87,7 @@ class _ServiceEditPageState extends State<ServiceEditPage> {
 
   void _submitUpdate() async {
     const url = 'http://localhost/flutter_api/update_service.php';
-    final userId = 7; // Replace with Provider if needed
+    final userId = Provider.of<UserProvider>(context, listen: false).userId;
 
     final response = await http.post(
       Uri.parse(url),
@@ -83,6 +106,7 @@ class _ServiceEditPageState extends State<ServiceEditPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Berhasil diperbarui")),
         );
+
         setState(() {
           _isEdited = false;
           _initialName = _nameController.text;
@@ -92,12 +116,10 @@ class _ServiceEditPageState extends State<ServiceEditPage> {
 
         await Future.delayed(const Duration(milliseconds: 500));
 
-        // Redirect to dashboard
         if (mounted) {
           Navigator.of(context).pushReplacement(
             MaterialPageRoute(
-              builder: (_) =>
-                  const Servicedashboard(), // adjust if your dashboard has a different name
+              builder: (_) => const Servicedashboard(),
             ),
           );
         }
@@ -106,6 +128,38 @@ class _ServiceEditPageState extends State<ServiceEditPage> {
           const SnackBar(content: Text("Gagal memperbarui")),
         );
       }
+    }
+  }
+
+  Color _getColor(String color) {
+    switch (color.toLowerCase()) {
+      case 'blue':
+        return Colors.blue;
+      case 'pink':
+        return Colors.pink;
+      case 'orange':
+        return Colors.orange;
+      case 'yellow':
+        return Colors.yellow;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  IconData _getIcon(String icon) {
+    switch (icon) {
+      case 'sound_detection_dog_barking':
+        return Icons.pets;
+      case 'raven':
+        return Symbols.raven;
+      case 'mouse':
+        return Icons.pest_control_rodent;
+      case 'cruelty_free':
+        return Icons.cruelty_free;
+      case 'waves':
+        return Icons.waves;
+      default:
+        return Icons.help_outline;
     }
   }
 
@@ -122,7 +176,7 @@ class _ServiceEditPageState extends State<ServiceEditPage> {
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
               child: Row(
                 children: [
-                  BackButton(),
+                  const BackButton(),
                   const SizedBox(width: 8),
                   const Text(
                     'Kustomisasi',
@@ -187,6 +241,57 @@ class _ServiceEditPageState extends State<ServiceEditPage> {
                   const SizedBox(height: 16),
                   _buildLabel('Lokasi'),
                   _buildTextField(_locationController, 'Lokasi Penyedia Jasa'),
+                  const SizedBox(height: 24),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Melayani Hewan',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      GestureDetector(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const ServiceAnimalPage(),
+                            ),
+                          );
+                        },
+                        child: const Text(
+                          'Tambahkan',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.blue,
+                            decoration: TextDecoration.underline,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  _selectedAnimals.isEmpty
+                      ? const Text('Belum ada hewan yang dipilih.')
+                      : SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: Row(
+                            children: _selectedAnimals.map((animal) {
+                              return Padding(
+                                padding: const EdgeInsets.only(right: 8.0),
+                                child: AnimalCard(
+                                  name: animal['name'],
+                                  backgroundColor:
+                                      _getColor(animal['color'] ?? 'grey'),
+                                  iconData: _getIcon(animal['icon'] ?? ''),
+                                  isSelected: true,
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                        ),
                   const SizedBox(height: 32),
                   SizedBox(
                     width: double.infinity,
